@@ -1,0 +1,56 @@
+Widget _buildDealsCarousel(
+      BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+    if (snapshot.hasError) {
+      return Center(child: Text("Error: ${snapshot.error}"));
+    }
+    if (!snapshot.hasData && !_hiveBox.isOpen) {
+      return Center(child: CircularProgressIndicator());
+    }
+    List<QueryDocumentSnapshot> docs =
+        snapshot.hasData ? snapshot.data!.docs : _hiveBox.get('deals') ?? [];
+        
+    if (!_hasInternet) {
+      return CarouselSlider(
+        items: docs.map((doc) {
+          return _buildCarouselItem(doc);
+        }).toList(),
+        options: CarouselOptions(
+          height: 245,
+          enlargeCenterPage: false,
+          enableInfiniteScroll: false,
+          viewportFraction: 0.8,
+          scrollPhysics: ClampingScrollPhysics(),
+        ),
+      );
+    } else {
+      return FutureBuilder(
+        future: _hiveBox.put('deals', docs),
+        builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
+          return StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance.collection('deals').snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Center(child: Text("Error: ${snapshot.error}"));
+              }
+              if (!snapshot.hasData) {
+                return Center(child: CircularProgressIndicator());
+              }
+              List<QueryDocumentSnapshot> docs = snapshot.data!.docs;
+              return CarouselSlider(
+                items: docs.map((doc) {
+                  return _buildCarouselItem(doc);
+                }).toList(),
+                options: CarouselOptions(
+                  height: 245,
+                  enlargeCenterPage: false,
+                  enableInfiniteScroll: false,
+                  viewportFraction: 0.8,
+                  scrollPhysics: ClampingScrollPhysics(),
+                ),
+              );
+            },
+          );
+        },
+      );
+    }
+  }
